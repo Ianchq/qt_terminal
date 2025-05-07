@@ -14,6 +14,13 @@ signals:
 
 protected:
     void keyPressEvent(QKeyEvent *event) override;
+
+private:
+    QStringList commandHistory;
+    int historyIndex = -1;
+
+    QString getCurrentPromptLine() const;
+    void setCurrentCommand(const QString &command);
 };
 
 #endif // TERMINALTEXTEDIT_H
