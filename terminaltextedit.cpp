@@ -13,8 +13,8 @@ TerminalTextEdit::TerminalTextEdit(QWidget *parent)
     setAcceptRichText(false);
     setCursorWidth(2);
 
-    defaultCharFormat.setForeground(QColor("#179a7e"));
-    setStyleSheet("background-color: #1e2229; color: #179a7e;");
+    defaultCharFormat.setForeground(QColor("#ffffff"));
+    setStyleSheet("background-color: #1e2229; color: #ffffff;");
 
     createHistoryFileIfNeeded();
     loadHistory();
@@ -89,6 +89,7 @@ void TerminalTextEdit::keyPressEvent(QKeyEvent *event)
             cursor.movePosition(QTextCursor::StartOfBlock, QTextCursor::KeepAnchor);
             cursor.removeSelectedText();
             cursor.insertText(prompt + commandHistory.value(historyIndex));
+            highlightCommand();
         }
     }
     else if (event->key() == Qt::Key_Down) {
@@ -106,6 +107,7 @@ void TerminalTextEdit::keyPressEvent(QKeyEvent *event)
             cursor.removeSelectedText();
             cursor.insertText(prompt);
         }
+        highlightCommand();
     }
     else if (event->key() == Qt::Key_Backspace) {
         QTextCursor cursor = textCursor();
@@ -124,6 +126,7 @@ void TerminalTextEdit::keyPressEvent(QKeyEvent *event)
     else if (event->key() == Qt::Key_Tab) {
         event->accept();
         handleTabCompletion();
+        highlightCommand();
     }
     else {
         QTextEdit::keyPressEvent(event);
@@ -154,6 +157,7 @@ void TerminalTextEdit::highlightCommand()
         cursor.setCharFormat(format);
     }
 }
+
 
 bool TerminalTextEdit::isValidCommand(const QString &command)
 {
@@ -197,18 +201,25 @@ void TerminalTextEdit::handleTabCompletion()
         parts.removeLast();
         parts.append(matches.first());
         QString completedLine = parts.join(' ');
-        cursor.insertText(prompt + completedLine);
 
-        if (completedLine != getCurrentCommand()) {
-            commandHistory.append(completedLine);
-            historyIndex = commandHistory.size();
-            saveHistory();
-        }
-    } else if (matches.size() > 1) {
-        appendOutput("\n" + matches.join("  "));
-        appendPrompt();
+        cursor.movePosition(QTextCursor::StartOfBlock, QTextCursor::KeepAnchor);
+        cursor.removeSelectedText();
+        cursor.insertText(prompt + completedLine);
+        setTextCursor(cursor);
+
+        highlightCommand();
+
+    } else if (!matches.isEmpty()) {
+        appendOutput("\n" + matches.join("  ") + "\n");
+
+        QTextCursor endCursor = textCursor();
+        endCursor.movePosition(QTextCursor::End);
+        setTextCursor(endCursor);
+        insertPrompt();
+        insertPlainText(currentInput);
     }
 }
+
 
 void TerminalTextEdit::loadHistory()
 {
