@@ -44,6 +44,9 @@ void MainWindow::executeCommand(const QString &command)
 {
     TerminalTextEdit *terminal = qobject_cast<TerminalTextEdit *>(centralWidget());
 
+    // Сохраняем команду для повторного ввода после завершения фонового процесса
+    QString lastCommand = command;
+
     QTextCursor cursor = terminal->textCursor();
     cursor.movePosition(QTextCursor::PreviousBlock);
     cursor.movePosition(QTextCursor::StartOfBlock);
@@ -61,6 +64,17 @@ void MainWindow::executeCommand(const QString &command)
     QString program = parts[0];
     QStringList arguments = parts.mid(1);
 
+    bool isBackground = parts.last() == "&";
+    QString cleanCommand = command;
+
+    if (isBackground) {
+        parts.removeLast();
+        cleanCommand = parts.join(" ");
+        terminal->appendOutput("[Running in background]: " + cleanCommand + "\n");
+        runBackgroundProcess(cleanCommand);
+        terminal->insertPrompt();
+        return;
+    }
 
     if (program == "sudo") {
         arguments.prepend("-S");
@@ -101,6 +115,7 @@ void MainWindow::executeCommand(const QString &command)
 
     connect(currentProcess, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), [=](int, QProcess::ExitStatus) {
         terminal->insertPrompt();
+        terminal->appendOutput("\n" + lastCommand + "\n");  // Добавляем команду после завершения процесса
         currentProcess->deleteLater();
         currentProcess = nullptr;
     });
@@ -132,6 +147,7 @@ void MainWindow::executeCommand(const QString &command)
     }
 }
 
+
 void MainWindow::runCdCommand(const QStringList &arguments)
 {
     TerminalTextEdit *terminal = qobject_cast<TerminalTextEdit *>(centralWidget());
@@ -154,4 +170,62 @@ void MainWindow::runCdCommand(const QStringList &arguments)
     } else {
         terminal->appendOutput("cd: no such directory: " + path + "\n");
     }
+}
+
+void MainWindow::runBackgroundProcess(const QString &command)
+{
+    TerminalTextEdit *terminal = qobject_cast<TerminalTextEdit *>(centralWidget());
+
+    QStringList parts = command.split(" ", Qt::SkipEmptyParts);
+    if (parts.isEmpty())
+        return;
+
+    QString program = parts[0];
+    QStringList arguments = parts.mid(1);
+
+    QProcess *bgProcess = new QProcess(this);
+    bgProcess->setProgram(program);
+    bgProcess->setArguments(arguments);
+    bgProcess->start();
+
+    if (!bgProcess->waitForStarted()) {
+        terminal->appendOutput("Error: Could not start background command\n");
+        delete bgProcess;
+        return;
+    }
+
+    backgroundProcesses.append({bgProcess, command});
+
+    connect(bgProcess, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
+            this, [=](int exitCode, QProcess::ExitStatus) {
+                for (int i = 0; i < backgroundProcesses.size(); ++i) {
+                    if (backgroundProcesses[i].process == bgProcess) {
+                        QString originalCmd = backgroundProcesses[i].originalCommand;
+                        backgroundProcesses.removeAt(i);
+
+                        QTextCursor cursor = terminal->textCursor();
+                        cursor.movePosition(QTextCursor::End);
+                        cursor.select(QTextCursor::BlockUnderCursor);
+                        QString currentLine = cursor.selectedText();
+
+                        QString prompt = terminal->lastPrompt;
+
+
+                        QString userTyped = currentLine.mid(prompt.length());
+
+                        terminal->appendOutput("\n[BG Process finished] Exit code: " + QString::number(exitCode) + "\n");
+
+                        terminal->insertPrompt();
+                        if (!userTyped.isEmpty()) {
+                            terminal->insertPlainText(userTyped);
+                            terminal->highlightCommand();
+                        }
+
+                        break;
+                    }
+                }
+
+                bgProcess->deleteLater();
+            }
+            );
 }

@@ -12,6 +12,9 @@ public:
     QTextCharFormat getDefaultCharFormat() const;
     void insertPrompt();
     void appendOutput(const QString &text);
+    void appendPrompt();
+    void highlightCommand();
+    QString lastPrompt;
 
 signals:
     void commandEntered(const QString &command);
@@ -31,8 +34,6 @@ private:
     void createHistoryFileIfNeeded();
     QStringList findCompletions(const QString &prefix);
     void handleTabCompletion();
-    void appendPrompt();
-    void highlightCommand();
     bool isValidCommand(const QString &command);
 
     QStringList commandHistory;

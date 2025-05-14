@@ -28,13 +28,11 @@ QTextCharFormat TerminalTextEdit::getDefaultCharFormat() const
 
 void TerminalTextEdit::insertPrompt()
 {
-    QTextCursor cursor = textCursor();
+    lastPrompt = QDir::currentPath() + "$ ";
+    this->insertPlainText(lastPrompt);
+    QTextCursor cursor = this->textCursor();
     cursor.movePosition(QTextCursor::End);
-    cursor.setCharFormat(defaultCharFormat);
-    cursor.insertBlock();
-    prompt = QDir::currentPath() + "$ ";
-    cursor.insertText(prompt, defaultCharFormat);
-    setTextCursor(cursor);
+    this->setTextCursor(cursor);
     ensureCursorVisible();
 }
 
@@ -148,9 +146,9 @@ void TerminalTextEdit::highlightCommand()
         bool valid = isValidCommand(commandName);
         QTextCharFormat format;
         if (valid) {
-            format.setForeground(QColor("#44853a")); // Green for valid
+            format.setForeground(QColor("#44853a"));
         } else {
-            format.setForeground(QColor("#bc352a")); // Red for invalid
+            format.setForeground(QColor("#bc352a"));
         }
         cursor.setPosition(startPos);
         cursor.movePosition(QTextCursor::NextWord, QTextCursor::KeepAnchor);
@@ -307,3 +305,4 @@ void TerminalTextEdit::appendPrompt()
 {
     append(prompt);
 }
+
