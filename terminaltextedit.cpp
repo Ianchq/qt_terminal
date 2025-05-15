@@ -5,6 +5,7 @@
 #include <QTextCursor>
 #include <QTextCharFormat>
 #include <QProcessEnvironment>
+#include <QTextBlock>
 
 TerminalTextEdit::TerminalTextEdit(QWidget *parent)
     : QTextEdit(parent)
@@ -63,10 +64,12 @@ QString TerminalTextEdit::getCurrentCommand() const
 void TerminalTextEdit::keyPressEvent(QKeyEvent *event)
 {
     QTextCursor cursor = textCursor();
-    cursor.movePosition(QTextCursor::End);
-    setTextCursor(cursor);
+    // cursor.movePosition(QTextCursor::End);
+    // setTextCursor(cursor);
 
     if (event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter) {
+        cursor.movePosition(QTextCursor::End);
+        setTextCursor(cursor);
         QString currentLine = getCurrentCommand();
         insertPlainText("\n");
 
@@ -123,6 +126,30 @@ void TerminalTextEdit::keyPressEvent(QKeyEvent *event)
         event->accept();
         handleTabCompletion();
         highlightCommand();
+    }
+    else if (event->key() == Qt::Key_Left) {
+        QTextCursor cursor = textCursor();
+        int promptLength = prompt.length();
+
+        // Получить позицию начала пользовательского ввода
+        cursor.movePosition(QTextCursor::StartOfBlock);
+        cursor.movePosition(QTextCursor::Right, QTextCursor::MoveAnchor, promptLength);
+        int minCursorPos = cursor.position();
+
+        cursor = textCursor();
+        if (cursor.position() > minCursorPos) {
+            cursor.movePosition(QTextCursor::Left);
+            setTextCursor(cursor);
+        }
+        return;
+    }
+    else if (event->key() == Qt::Key_Right) {
+        QTextCursor cursor = textCursor();
+        if (cursor.position() < document()->lastBlock().position() + document()->lastBlock().length() - 1) {
+            cursor.movePosition(QTextCursor::Right);
+            setTextCursor(cursor);
+        }
+        return;
     }
     else {
         QTextEdit::keyPressEvent(event);

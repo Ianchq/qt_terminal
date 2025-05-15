@@ -37,7 +37,6 @@ void MainWindow::handleInterrupt()
         terminal->appendOutput("^C\n");
         currentProcess = nullptr;
     }
-    terminal->insertPrompt();
 }
 
 void MainWindow::executeCommand(const QString &command)
@@ -216,13 +215,10 @@ void MainWindow::runBackgroundProcess(const QString &command)
                         QString originalCmd = backgroundProcesses[i].originalCommand;
                         backgroundProcesses.removeAt(i);
 
-                        // Сохраняем частичный ввод пользователя
                         QString partialInput = terminal->getPartialInput();
 
-                        // Выводим сообщение о завершении
-                        terminal->appendOutput("\n[1]  + done       " + originalCmd + "\n");
+                        terminal->appendOutput(QString("\n%1 done       " + originalCmd + "\n").arg(pid));
 
-                        // Восстанавливаем приглашение и ввод
                         terminal->insertPrompt();
                         terminal->insertPlainText(partialInput);
                         terminal->highlightCommand();
