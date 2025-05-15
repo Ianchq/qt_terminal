@@ -114,8 +114,17 @@ void MainWindow::executeCommand(const QString &command)
     });
 
     connect(currentProcess, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), [=](int, QProcess::ExitStatus) {
+        TerminalTextEdit* terminal = qobject_cast<TerminalTextEdit*>(centralWidget());
+
+        // Получаем частичный ввод пользователя
+        QString partialInput = terminal->getPartialInput();
+
+        // Вставляем приглашение и частичный ввод
+        terminal->appendOutput("\n");  // Добавляем перевод строки
         terminal->insertPrompt();
-        terminal->appendOutput("\n" + lastCommand + "\n");  // Добавляем команду после завершения процесса
+        terminal->insertPlainText(partialInput);
+        terminal->highlightCommand();
+
         currentProcess->deleteLater();
         currentProcess = nullptr;
     });
@@ -166,9 +175,10 @@ void MainWindow::runCdCommand(const QStringList &arguments)
     bool success = dir.cd(path);
     if (success) {
         QDir::setCurrent(dir.absolutePath());
-        terminal->appendOutput("Changed directory to: " + dir.absolutePath() + "\n");
+        terminal->prompt = QDir::currentPath() + "$ ";
+        terminal->appendOutput("\nChanged directory to: " + dir.absolutePath() + "\n\n");
     } else {
-        terminal->appendOutput("cd: no such directory: " + path + "\n");
+        terminal->appendOutput("\ncd: no such directory: " + path + "\n\n");
     }
 }
 
@@ -194,38 +204,32 @@ void MainWindow::runBackgroundProcess(const QString &command)
         return;
     }
 
+    qint64 pid = bgProcess->processId();
+    terminal->appendOutput(QString("[%1] %2\n").arg(backgroundProcesses.size()).arg(pid));
+
     backgroundProcesses.append({bgProcess, command});
 
     connect(bgProcess, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
-            this, [=](int exitCode, QProcess::ExitStatus) {
+            this, [=](int, QProcess::ExitStatus) {
                 for (int i = 0; i < backgroundProcesses.size(); ++i) {
                     if (backgroundProcesses[i].process == bgProcess) {
                         QString originalCmd = backgroundProcesses[i].originalCommand;
                         backgroundProcesses.removeAt(i);
 
-                        QTextCursor cursor = terminal->textCursor();
-                        cursor.movePosition(QTextCursor::End);
-                        cursor.select(QTextCursor::BlockUnderCursor);
-                        QString currentLine = cursor.selectedText();
+                        // Сохраняем частичный ввод пользователя
+                        QString partialInput = terminal->getPartialInput();
 
-                        QString prompt = terminal->lastPrompt;
+                        // Выводим сообщение о завершении
+                        terminal->appendOutput("\n[1]  + done       " + originalCmd + "\n");
 
-
-                        QString userTyped = currentLine.mid(prompt.length());
-
-                        terminal->appendOutput("\n[BG Process finished] Exit code: " + QString::number(exitCode) + "\n");
-
+                        // Восстанавливаем приглашение и ввод
                         terminal->insertPrompt();
-                        if (!userTyped.isEmpty()) {
-                            terminal->insertPlainText(userTyped);
-                            terminal->highlightCommand();
-                        }
+                        terminal->insertPlainText(partialInput);
+                        terminal->highlightCommand();
 
                         break;
                     }
                 }
-
                 bgProcess->deleteLater();
-            }
-            );
+            });
 }

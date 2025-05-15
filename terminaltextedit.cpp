@@ -14,7 +14,7 @@ TerminalTextEdit::TerminalTextEdit(QWidget *parent)
     setCursorWidth(2);
 
     defaultCharFormat.setForeground(QColor("#ffffff"));
-    setStyleSheet("background-color: #1e2229; color: #ffffff;");
+    setStyleSheet("background-color: #1e2229; color: #ffffff");
 
     createHistoryFileIfNeeded();
     loadHistory();
@@ -75,8 +75,6 @@ void TerminalTextEdit::keyPressEvent(QKeyEvent *event)
             historyIndex = commandHistory.size();
             saveHistory();
             emit commandEntered(currentLine);
-        } else {
-            insertPrompt();
         }
         scrollToBottom();
     }
@@ -306,3 +304,12 @@ void TerminalTextEdit::appendPrompt()
     append(prompt);
 }
 
+QString TerminalTextEdit::getPartialInput() {
+    QTextCursor cursor = textCursor();
+    cursor.movePosition(QTextCursor::End);
+    cursor.movePosition(QTextCursor::StartOfBlock, QTextCursor::KeepAnchor);
+    QString line = cursor.selectedText();
+    if (line.startsWith(prompt))
+        return line.mid(prompt.length());
+    return QString();
+}
