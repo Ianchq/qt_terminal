@@ -2,12 +2,21 @@
 #define TERMINALTEXTEDIT_H
 
 #include <QTextEdit>
+#include <QDir>
 
 class TerminalTextEdit : public QTextEdit
 {
     Q_OBJECT
 public:
     explicit TerminalTextEdit(QWidget *parent = nullptr);
+    QTextCharFormat getDefaultCharFormat() const;
+    void insertPrompt();
+    void appendOutput(const QString &text);
+    void appendPrompt();
+    void highlightCommand();
+    QString lastPrompt;
+    QString getPartialInput();
+    QString prompt = QDir::currentPath() +"$ ";
 
 signals:
     void commandEntered(const QString &command);
@@ -20,7 +29,6 @@ protected:
     void showCustomContextMenu(const QPoint &pos);
 
 private:
-    void insertPrompt();
     void scrollToBottom();
     QString getCurrentCommand() const;
     void loadHistory();
@@ -28,14 +36,14 @@ private:
     void createHistoryFileIfNeeded();
     QStringList findCompletions(const QString &prefix);
     void handleTabCompletion();
-    void appendPrompt();
+    bool isValidCommand(const QString &command);
 
     QStringList commandHistory;
     int historyIndex = 0;
-    const QString prompt = ">>> ";
     const int MaxHistorySize = 100;
     const QString HistoryFileName = "history.txt";
     bool selectingText = false;
+    QTextCharFormat defaultCharFormat;
 };
 
 #endif // TERMINALTEXTEDIT_H

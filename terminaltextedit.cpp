@@ -2,6 +2,10 @@
 #include <QScrollBar>
 #include <QDir>
 #include <QMouseEvent>
+#include <QTextCursor>
+#include <QTextCharFormat>
+#include <QProcessEnvironment>
+#include <QTextBlock>
 
 TerminalTextEdit::TerminalTextEdit(QWidget *parent)
     : QTextEdit(parent)
@@ -10,26 +14,39 @@ TerminalTextEdit::TerminalTextEdit(QWidget *parent)
     setAcceptRichText(false);
     setCursorWidth(2);
 
+
+    defaultCharFormat.setForeground(QColor("#ffffff"));
+    setStyleSheet("background-color: #1e2229; color: #ffffff");
+
+
     createHistoryFileIfNeeded();
     loadHistory();
     insertPrompt();
 }
 
+
+QTextCharFormat TerminalTextEdit::getDefaultCharFormat() const
+{
+    return defaultCharFormat;
+}
+
 void TerminalTextEdit::insertPrompt()
 {
-    moveCursor(QTextCursor::End);
-    QTextCursor cursor = textCursor();
-
-    cursor.movePosition(QTextCursor::StartOfBlock, QTextCursor::KeepAnchor);
-    QString line = cursor.selectedText();
-
-    if (line.trimmed().isEmpty()) {
-        cursor.movePosition(QTextCursor::End);
-        setTextCursor(cursor);
-        insertPlainText(prompt);
-    }
-
+    lastPrompt = QDir::currentPath() + "$ ";
+    this->insertPlainText(lastPrompt);
+    QTextCursor cursor = this->textCursor();
+    cursor.movePosition(QTextCursor::End);
+    this->setTextCursor(cursor);
     ensureCursorVisible();
+}
+
+void TerminalTextEdit::appendOutput(const QString &text)
+{
+    QTextCursor cursor = textCursor();
+    cursor.movePosition(QTextCursor::End);
+    cursor.setCharFormat(defaultCharFormat);
+    cursor.insertText(text);
+    setTextCursor(cursor);
 }
 
 void TerminalTextEdit::scrollToBottom()
@@ -50,10 +67,12 @@ QString TerminalTextEdit::getCurrentCommand() const
 void TerminalTextEdit::keyPressEvent(QKeyEvent *event)
 {
     QTextCursor cursor = textCursor();
-    cursor.movePosition(QTextCursor::End);
-    setTextCursor(cursor);
+    // cursor.movePosition(QTextCursor::End);
+    // setTextCursor(cursor);
 
     if (event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter) {
+        cursor.movePosition(QTextCursor::End);
+        setTextCursor(cursor);
         QString currentLine = getCurrentCommand();
         insertPlainText("\n");
 
@@ -62,8 +81,6 @@ void TerminalTextEdit::keyPressEvent(QKeyEvent *event)
             historyIndex = commandHistory.size();
             saveHistory();
             emit commandEntered(currentLine);
-        } else {
-            insertPrompt();
         }
         scrollToBottom();
     }
@@ -74,6 +91,7 @@ void TerminalTextEdit::keyPressEvent(QKeyEvent *event)
             cursor.movePosition(QTextCursor::StartOfBlock, QTextCursor::KeepAnchor);
             cursor.removeSelectedText();
             cursor.insertText(prompt + commandHistory.value(historyIndex));
+            highlightCommand();
         }
     }
     else if (event->key() == Qt::Key_Down) {
@@ -91,6 +109,7 @@ void TerminalTextEdit::keyPressEvent(QKeyEvent *event)
             cursor.removeSelectedText();
             cursor.insertText(prompt);
         }
+        highlightCommand();
     }
     else if (event->key() == Qt::Key_Backspace) {
         QTextCursor cursor = textCursor();
@@ -100,6 +119,7 @@ void TerminalTextEdit::keyPressEvent(QKeyEvent *event)
             return;
         }
         QTextEdit::keyPressEvent(event);
+        highlightCommand();
     }
     else if (event->modifiers() == Qt::ControlModifier && event->key() == Qt::Key_C) {
         emit interruptRequested();
@@ -108,11 +128,124 @@ void TerminalTextEdit::keyPressEvent(QKeyEvent *event)
     else if (event->key() == Qt::Key_Tab) {
         event->accept();
         handleTabCompletion();
+        highlightCommand();
+    }
+    else if (event->key() == Qt::Key_Left) {
+        QTextCursor cursor = textCursor();
+        int promptLength = prompt.length();
+
+        // Получить позицию начала пользовательского ввода
+        cursor.movePosition(QTextCursor::StartOfBlock);
+        cursor.movePosition(QTextCursor::Right, QTextCursor::MoveAnchor, promptLength);
+        int minCursorPos = cursor.position();
+
+        cursor = textCursor();
+        if (cursor.position() > minCursorPos) {
+            cursor.movePosition(QTextCursor::Left);
+            setTextCursor(cursor);
+        }
+        return;
+    }
+    else if (event->key() == Qt::Key_Right) {
+        QTextCursor cursor = textCursor();
+        if (cursor.position() < document()->lastBlock().position() + document()->lastBlock().length() - 1) {
+            cursor.movePosition(QTextCursor::Right);
+            setTextCursor(cursor);
+        }
+        return;
     }
     else {
         QTextEdit::keyPressEvent(event);
+        highlightCommand();
     }
 }
+
+void TerminalTextEdit::highlightCommand()
+{
+    QTextCursor cursor(document());
+    cursor.movePosition(QTextCursor::End);
+    cursor.movePosition(QTextCursor::StartOfBlock);
+    cursor.movePosition(QTextCursor::Right, QTextCursor::MoveAnchor, prompt.length());
+    int startPos = cursor.position();
+    cursor.movePosition(QTextCursor::NextWord, QTextCursor::KeepAnchor);
+    QString commandName = cursor.selectedText().trimmed();
+
+    if (!commandName.isEmpty()) {
+        bool valid = isValidCommand(commandName);
+        QTextCharFormat format;
+        if (valid) {
+            format.setForeground(QColor("#44853a"));
+        } else {
+            format.setForeground(QColor("#bc352a"));
+        }
+        cursor.setPosition(startPos);
+        cursor.movePosition(QTextCursor::NextWord, QTextCursor::KeepAnchor);
+        cursor.setCharFormat(format);
+    }
+}
+
+
+bool TerminalTextEdit::isValidCommand(const QString &command)
+{
+    static QStringList builtInCommands = {"cd", "clear"};
+    if (builtInCommands.contains(command)) {
+        return true;
+    }
+    if (command.contains('/')) {
+        QFileInfo fileInfo(command);
+        return fileInfo.exists() && fileInfo.isExecutable();
+    } else {
+        QString pathEnv = QProcessEnvironment::systemEnvironment().value("PATH");
+        QStringList paths = pathEnv.split(':');
+        for (const QString &dir : paths) {
+            QFileInfo fileInfo(dir + "/" + command);
+            if (fileInfo.exists() && fileInfo.isExecutable()) {
+                return true;
+            }
+        }
+        return false;
+    }
+}
+
+void TerminalTextEdit::handleTabCompletion()
+{
+    QTextCursor cursor = textCursor();
+    cursor.movePosition(QTextCursor::StartOfBlock, QTextCursor::KeepAnchor);
+    QString line = cursor.selectedText();
+    QString currentInput = line.mid(prompt.length());
+
+    if (currentInput.trimmed().isEmpty()) {
+        insertPlainText("\t");
+        return;
+    }
+
+    QStringList parts = currentInput.split(' ', Qt::SkipEmptyParts);
+    QString prefix = parts.isEmpty() ? "" : parts.last();
+
+    QStringList matches = findCompletions(prefix);
+    if (matches.size() == 1) {
+        parts.removeLast();
+        parts.append(matches.first());
+        QString completedLine = parts.join(' ');
+
+        cursor.movePosition(QTextCursor::StartOfBlock, QTextCursor::KeepAnchor);
+        cursor.removeSelectedText();
+        cursor.insertText(prompt + completedLine);
+        setTextCursor(cursor);
+
+        highlightCommand();
+
+    } else if (!matches.isEmpty()) {
+        appendOutput("\n" + matches.join("  ") + "\n");
+
+        QTextCursor endCursor = textCursor();
+        endCursor.movePosition(QTextCursor::End);
+        setTextCursor(endCursor);
+        insertPrompt();
+        insertPlainText(currentInput);
+    }
+}
+
 
 void TerminalTextEdit::loadHistory()
 {
@@ -170,41 +303,6 @@ void TerminalTextEdit::mouseReleaseEvent(QMouseEvent *event)
     QTextEdit::mouseReleaseEvent(event);
 }
 
-void TerminalTextEdit::handleTabCompletion()
-{
-    QTextCursor cursor = textCursor();
-    cursor.movePosition(QTextCursor::StartOfBlock, QTextCursor::KeepAnchor);
-    QString line = cursor.selectedText();
-
-    QString currentInput = line.mid(prompt.length());
-    QStringList parts = currentInput.split(' ', Qt::SkipEmptyParts);
-
-    QString prefix;
-    if (parts.isEmpty()) {
-        prefix = "";
-    } else {
-        prefix = parts.last();
-    }
-
-    QStringList matches = findCompletions(prefix);
-    if (matches.size() == 1) {
-        parts.removeLast();
-        parts.append(matches.first());
-        QString completedLine = parts.join(' ');
-        cursor.insertText(prompt + completedLine);
-
-        if (completedLine != getCurrentCommand()) {
-            commandHistory.append(completedLine);
-            historyIndex = commandHistory.size();
-            saveHistory();
-        }
-    } else if (matches.size() > 1) {
-        append("\n" + matches.join("  "));
-        appendPrompt();
-    }
-}
-
-
 QStringList TerminalTextEdit::findCompletions(const QString &prefix)
 {
     QStringList matches;
@@ -234,4 +332,14 @@ QStringList TerminalTextEdit::findCompletions(const QString &prefix)
 void TerminalTextEdit::appendPrompt()
 {
     append(prompt);
+}
+
+QString TerminalTextEdit::getPartialInput() {
+    QTextCursor cursor = textCursor();
+    cursor.movePosition(QTextCursor::End);
+    cursor.movePosition(QTextCursor::StartOfBlock, QTextCursor::KeepAnchor);
+    QString line = cursor.selectedText();
+    if (line.startsWith(prompt))
+        return line.mid(prompt.length());
+    return QString();
 }
