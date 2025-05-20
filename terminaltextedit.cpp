@@ -6,6 +6,7 @@
 #include <QTextCharFormat>
 #include <QProcessEnvironment>
 #include <QTextBlock>
+#include <QTextStream>
 
 TerminalTextEdit::TerminalTextEdit(QWidget *parent)
     : QTextEdit(parent)
