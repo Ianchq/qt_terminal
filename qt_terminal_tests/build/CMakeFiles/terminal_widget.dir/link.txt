@@ -1,0 +1,2 @@
+/usr/bin/ar qc libterminal_widget.a CMakeFiles/terminal_widget.dir/terminal_widget_autogen/mocs_compilation.cpp.o CMakeFiles/terminal_widget.dir/home/ian/qt_terminal/qt_terminal/terminaltextedit.cpp.o CMakeFiles/terminal_widget.dir/home/ian/qt_terminal/qt_terminal/mainwindow.cpp.o
+/usr/bin/ranlib libterminal_widget.a

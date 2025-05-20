@@ -1,0 +1,5 @@
+my_tests_autogen/timestamp: \
+	/home/ian/qt_terminal/qt_terminal/qt_terminal_tests/tests/CMakeLists.txt \
+	/home/ian/qt_terminal/qt_terminal/qt_terminal_tests/tests/test_terminaltextedit.cpp \
+	/usr/share/cmake-3.28/Modules/GoogleTest.cmake \
+	/usr/bin/cmake

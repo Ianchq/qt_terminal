@@ -1,0 +1,12 @@
+gmock_main_autogen/timestamp: \
+	/home/ian/qt_terminal/qt_terminal/qt_terminal_tests/build/_deps/googletest-src/googlemock/CMakeLists.txt \
+	/home/ian/qt_terminal/qt_terminal/qt_terminal_tests/build/_deps/googletest-src/googlemock/cmake/gmock.pc.in \
+	/home/ian/qt_terminal/qt_terminal/qt_terminal_tests/build/_deps/googletest-src/googlemock/cmake/gmock_main.pc.in \
+	/home/ian/qt_terminal/qt_terminal/qt_terminal_tests/build/_deps/googletest-src/googlemock/src/gmock_main.cc \
+	/usr/share/cmake-3.28/Modules/CheckCSourceCompiles.cmake \
+	/usr/share/cmake-3.28/Modules/CheckIncludeFile.cmake \
+	/usr/share/cmake-3.28/Modules/CheckLibraryExists.cmake \
+	/usr/share/cmake-3.28/Modules/FindPackageHandleStandardArgs.cmake \
+	/usr/share/cmake-3.28/Modules/FindPackageMessage.cmake \
+	/usr/share/cmake-3.28/Modules/FindThreads.cmake \
+	/usr/bin/cmake

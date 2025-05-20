@@ -1,0 +1,100 @@
+echo hello
+sleep 2 &
+echo hello
+sleep 2 &
+sleep 2 &
+sleep 2 &
+sleep 1 &
+sleep 1 &
+sleep 2 &
+sleep 2 &
+sleep 2 &
+sleep 2 &
+sleep 2 &
+sleep 2 &
+sleep 3 &
+ls
+cd .
+cd ..
+ls
+cd ..
+ld
+ls
+ls
+cd ..
+ls
+cd ..
+ls
+pwd
+whoami
+ss
+ip
+ping 1.1.1.1 &
+sleep 5 &
+sleep 5 &
+sleep 5 &
+sleep 5 &
+sleep 5 &
+sleep 5 &
+sleep 5 &
+sleep 5 &
+sleep 5 &
+sleep 5 &
+sleep 5 &
+sleep 5 &
+sleep 5 &
+sleep 5 &
+sleep 5 &
+sleep 5 &
+ls
+ls
+cd ..
+/home/ian/qt_terminal/qt_terminal/build/Desktop-Debug$ /home/ian/qt_terminal/qt_terminal/build/Desktop-Debug$ /home/ian/qt_terminal/qt_terminal/build/Desktop-Debug$ /home/ian/qt_terminal/qt_terminal/build/Desktop-Debug$ /home/ian/qt_terminal/qt_terminal/build/Desktop-Debug$ /home/ian/qt_terminal/qt_terminal/build/Desktop-Debug$ ls
+ping 1.1.1.1
+ping 1.1.1.1
+ls
+sleep 5
+sleep 5
+sleep 5 &
+sleep 5 &
+sleep 5 &
+sleep 5 &
+sleep 5 &
+sleep 5 &
+sleep 5 &
+sleep 5 &
+sleep 5 &
+sleep 5 &
+sleep 5 &
+s
+slep
+s
+sleep
+sleep 5 &
+sleep
+sleep 3
+sleep 3
+ls
+cddsdnsd
+sleep 5
+ls
+sleep 5
+ls
+cd ..
+лэжлб
+ждьждьд
+дбэж.дбэхб
+оли ло
+ls
+ls
+ls
+cd ..
+vim
+kate
+ls
+cd ..
+ls
+cd ..
+ls
+cd qt_terminal_tests
+ls
